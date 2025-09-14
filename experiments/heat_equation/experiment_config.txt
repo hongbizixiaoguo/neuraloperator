@@ -1,0 +1,12 @@
+Experiment Configuration
+==============================
+PDE Type: heat
+Number of Samples: 100
+Grid Size: 64x64
+Training Epochs: 20
+Learning Rate: 0.001
+Weight Decay: 0.0001
+FNO Modes: 16x16
+Hidden Channels: 32
+FNO Layers: 4
+Adaptive Experts: 4

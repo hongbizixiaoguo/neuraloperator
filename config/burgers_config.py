@@ -21,7 +21,7 @@ class BurgersDatasetConfig(ConfigBase):
     include_endpoint: List[bool] = [True, False]
 
 class BurgersOptConfig(ConfigBase):
-    n_epochs: int = 10000
+    n_epochs: int = 1000
     training_loss: str = "l2"
     testing_loss: str = "l2"
     learning_rate: float = 1e-4

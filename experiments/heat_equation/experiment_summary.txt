@@ -1,0 +1,15 @@
+HEAT EQUATION EXPERIMENT SUMMARY
+============================================================
+
+Original FNO:
+  Final Train Loss: 0.000218
+  Final Test Loss:  0.000671
+  Parameters:       602,977
+
+Adaptive FNO:
+  Final Train Loss: 0.000137
+  Final Test Loss:  0.000212
+  Parameters:       603,576
+
+Performance Improvement:
+  Test Loss Improvement: +68.35%
