@@ -1,0 +1,16 @@
+Heat Equation 300 Epochs Configuration
+=======================================
+PDE Type: Heat Equation
+Mathematical Form: ∂u/∂t = α∇²u
+Diffusion Coefficient: 0.01
+Time Step: 0.1
+Number of Samples: 150
+Grid Size: 64x64
+Training Epochs: 300
+Learning Rate: 1e-3
+Weight Decay: 1e-4
+FNO Modes: 16x16
+Hidden Channels: 32
+FNO Layers: 4
+Adaptive Experts: 4
+Batch Size: 16

@@ -1,0 +1,18 @@
+HEAT EQUATION 300 EPOCHS SUMMARY
+============================================================
+
+Original FNO:
+  Final Test Loss:  0.00000537
+  Best Test Loss:   0.00000465
+  Training Time:    71.2s
+  Parameters:       602,977
+
+Adaptive FNO:
+  Final Test Loss:  0.00000208
+  Best Test Loss:   0.00000207
+  Training Time:    111.1s
+  Parameters:       603,576
+
+Performance Improvement:
+  Final Test Loss: +61.21%
+  Best Test Loss:  +55.43%

@@ -19,19 +19,19 @@ sys.path.append('/root/autodl-tmp/neuraloperator')
 from neuralop.models.fno import FNO2d
 from neuralop.models.final_adaptive_fno import AdaptiveFNO2d
 
-def main():
-    """运行Heat Equation 100 epochs实验"""
-    print(f"🔥 Heat Equation 100 Epochs Experiment")
+def main(n_epochs=100):
+    """运行Heat Equation实验"""
+    print(f"🔥 Heat Equation {n_epochs} Epochs Experiment")
     print("="*50)
     
     # 创建实验文件夹
-    results_dir = '/root/autodl-tmp/neuraloperator/experiments/heat_equation_100epochs'
+    results_dir = f'/root/autodl-tmp/neuraloperator/experiments/heat_equation_{n_epochs}epochs'
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(f'{results_dir}/figures', exist_ok=True)
     os.makedirs(f'{results_dir}/models', exist_ok=True)
     
     # 保存配置
-    config_text = """Heat Equation 100 Epochs Configuration
+    config_text = f"""Heat Equation {n_epochs} Epochs Configuration
 =======================================
 PDE Type: Heat Equation
 Mathematical Form: ∂u/∂t = α∇²u
@@ -39,7 +39,7 @@ Diffusion Coefficient: 0.01
 Time Step: 0.1
 Number of Samples: 150
 Grid Size: 64x64
-Training Epochs: 100
+Training Epochs: {n_epochs}
 Learning Rate: 1e-3
 Weight Decay: 1e-4
 FNO Modes: 16x16
@@ -118,7 +118,7 @@ Batch Size: 16"""
     
     # 训练模型
     for name, model in models.items():
-        print(f"\n🚀 Training {name} (100 epochs)...")
+        print(f"\n🚀 Training {name} ({n_epochs} epochs)...")
         start_time = time.time()
         
         optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
@@ -127,7 +127,7 @@ Batch Size: 16"""
         train_losses, test_losses = [], []
         best_test_loss = float('inf')
         
-        for epoch in range(100):
+        for epoch in range(n_epochs):
             # 训练
             model.train()
             epoch_train_loss = 0
@@ -167,7 +167,9 @@ Batch Size: 16"""
                 # 保存最佳模型
                 torch.save(model.state_dict(), f'{results_dir}/models/{name.lower().replace(" ", "_")}_best.pth')
             
-            if (epoch + 1) % 20 == 0:
+            # 动态调整打印频率
+            print_interval = max(1, n_epochs // 10)  # 每10%打印一次
+            if (epoch + 1) % print_interval == 0 or epoch == 0:
                 print(f"  Epoch {epoch+1:3d}: Train={avg_train_loss:.8f}, Test={avg_test_loss:.8f}, Best={best_test_loss:.8f}")
         
         training_time = time.time() - start_time
@@ -211,9 +213,9 @@ Batch Size: 16"""
     axes[1].grid(True, alpha=0.3)
     axes[1].set_yscale('log')
     
-    plt.suptitle('Heat Equation: 100 Epochs Training', fontsize=14, fontweight='bold')
+    plt.suptitle(f'Heat Equation: {n_epochs} Epochs Training', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    plt.savefig(f'{results_dir}/figures/training_curves_100epochs.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'{results_dir}/figures/training_curves_{n_epochs}epochs.png', dpi=150, bbox_inches='tight')
     plt.show()
     
     # 2. 预测对比
@@ -262,17 +264,17 @@ Batch Size: 16"""
         axes[i, 4].set_title(f'Error Diff {i+1}\n(Blue: Adaptive Better)')
         axes[i, 4].axis('off')
     
-    plt.suptitle('Heat Equation: 100 Epochs Prediction Comparison', fontsize=16, fontweight='bold')
+    plt.suptitle(f'Heat Equation: {n_epochs} Epochs Prediction Comparison', fontsize=16, fontweight='bold')
     plt.tight_layout()
-    plt.savefig(f'{results_dir}/figures/predictions_100epochs.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'{results_dir}/figures/predictions_{n_epochs}epochs.png', dpi=150, bbox_inches='tight')
     plt.show()
     
     # 打印总结
     print(f"\n{'='*60}")
-    print(f"HEAT EQUATION 100 EPOCHS SUMMARY")
+    print(f"HEAT EQUATION {n_epochs} EPOCHS SUMMARY")
     print(f"{'='*60}")
     
-    summary_lines = ["HEAT EQUATION 100 EPOCHS SUMMARY", "="*60]
+    summary_lines = [f"HEAT EQUATION {n_epochs} EPOCHS SUMMARY", "="*60]
     
     for name, result in results.items():
         final_loss = result['final_test_loss']
@@ -318,17 +320,36 @@ Batch Size: 16"""
         f.write('\n'.join(summary_lines))
     
     print(f"\n✓ Results saved to: {results_dir}")
-    print(f"📊 Training curves: figures/training_curves_100epochs.png")
-    print(f"🎯 Predictions: figures/predictions_100epochs.png")
+    print(f"📊 Training curves: figures/training_curves_{n_epochs}epochs.png")
+    print(f"🎯 Predictions: figures/predictions_{n_epochs}epochs.png")
     print(f"🤖 Models: models/ (best and final versions)")
     
     if best_improvement > 0:
         print(f"\n🎉 Adaptive FNO shows {best_improvement:.2f}% improvement!")
-        print(f"💡 Ready to run 500 epochs for even better results")
+        if n_epochs < 500:
+            print(f"💡 Consider running more epochs for even better results")
     else:
-        print(f"\n📝 Consider adjusting hyperparameters for 500 epochs run")
+        print(f"\n📝 Consider adjusting hyperparameters or running more epochs")
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Heat Equation Experiment with Adaptive FNO')
+    parser.add_argument('--epochs', type=int, default=100, 
+                       help='Number of training epochs (default: 100)')
+    parser.add_argument('--lr', type=float, default=1e-3,
+                       help='Learning rate (default: 1e-3)')
+    parser.add_argument('--batch-size', type=int, default=16,
+                       help='Batch size (default: 16)')
+    parser.add_argument('--n-experts', type=int, default=4,
+                       help='Number of experts for Adaptive FNO (default: 4)')
+    
+    args = parser.parse_args()
+    
+    # 如果没有命令行参数，使用默认值
+    if len(sys.argv) == 1:
+        main(n_epochs=100)
+    else:
+        main(n_epochs=args.epochs)
 
 

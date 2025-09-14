@@ -13,10 +13,100 @@ from ..layers.fno_block import FNOBlocks
 Number = Union[float, int]
 
 
+class FrequencyMixtureOfExperts(nn.Module):
+    """
+    频率分解专家混合（MoE）模块，严格按照论文实现
+    """
+    def __init__(self, 
+                 freq_length: int,  # F = L/2 + 1
+                 channels: int,     # C
+                 n_experts: int = 4,
+                 temperature: float = 1.0):
+        super().__init__()
+        self.freq_length = freq_length  # F
+        self.channels = channels        # C
+        self.n_experts = n_experts      # N
+        self.temperature = temperature
+        
+        # 可学习的频率带边界参数 θ = {θ1, θ2, ..., θN-1}
+        self.band_boundaries = nn.Parameter(torch.rand(n_experts - 1))
+        
+        # 门控网络：输入 G(X) ∈ R^(B×F)，输出 W(X) ∈ R^(B×N)
+        self.gating_network = nn.Sequential(
+            nn.Linear(freq_length, freq_length),
+            nn.ReLU(),
+            nn.Linear(freq_length, n_experts)
+        )
+        
+        # 每个专家的处理网络 Ei
+        self.expert_networks = nn.ModuleList([
+            nn.Linear(channels, channels) for _ in range(n_experts)
+        ])
+        
+    def forward(self, x_fft):
+        """
+        x_fft: 频域信号 [B, C, F] (复数)
+        返回: Fout(X) ∈ C^(B×C×F)
+        """
+        batch_size, channels, freq_length = x_fft.shape
+        
+        # 1. 计算频率幅度谱并在通道维度平均
+        # G(X) = (1/C) Σ |F(X)_c| ∈ R^(B×F)
+        freq_magnitude = torch.abs(x_fft)  # [B, C, F]
+        gating_input = freq_magnitude.mean(dim=1)  # [B, F] - 在通道维度平均
+        
+        # 2. 通过门控网络计算专家权重
+        # W(X) = softmax(Linear(G(X))) ∈ R^(B×N)
+        gating_scores = self.gating_network(gating_input)  # [B, N]
+        gating_scores = F.softmax(gating_scores / self.temperature, dim=-1)
+        
+        # 3. 获取排序后的频率带边界
+        # b̃i = σ(θi), i = 1, 2, ..., N-1
+        boundaries = torch.sigmoid(self.band_boundaries)  # [N-1]
+        boundaries, _ = torch.sort(boundaries)
+        
+        # 添加起始和结束边界: {b0, b1, ..., bN} = Sort({0, b̃1, ..., b̃N-1, 1})
+        boundaries = torch.cat([
+            torch.zeros(1, device=boundaries.device),
+            boundaries,
+            torch.ones(1, device=boundaries.device)
+        ])  # [N+1]
+        
+        # 4. 为每个专家创建频率范围掩码
+        freq_masks = []
+        for i in range(self.n_experts):
+            start_idx = int(boundaries[i] * freq_length)
+            end_idx = int(boundaries[i + 1] * freq_length)
+            
+            # 创建掩码 Mi(f)
+            mask = torch.zeros(freq_length, device=x_fft.device)
+            mask[start_idx:end_idx] = 1.0
+            freq_masks.append(mask)
+        
+        # 5. 计算每个专家的输出并加权融合
+        # Fout(X) = Σi Wi(X) · Fi(X)
+        output = torch.zeros_like(x_fft)
+        
+        for i in range(self.n_experts):
+            # 应用频率掩码: Fi(X) = Mi ⊙ F(X)
+            masked_fft = x_fft * freq_masks[i].unsqueeze(0).unsqueeze(0)  # [B, C, F]
+            
+            # 每个专家处理其频率子集（在通道维度）
+            # 转换为 [B, F, C] 以便专家网络处理
+            masked_fft_transposed = masked_fft.transpose(1, 2)  # [B, F, C]
+            expert_output = self.expert_networks[i](masked_fft_transposed)  # [B, F, C]
+            expert_output = expert_output.transpose(1, 2)  # [B, C, F]
+            
+            # 应用门控权重
+            expert_weight = gating_scores[:, i:i+1].unsqueeze(-1)  # [B, 1, 1]
+            output += expert_weight * expert_output
+        
+        return output, gating_scores, boundaries
+
+
 class AdaptiveFrequencyGating(nn.Module):
     """
-    自适应频率门控模块，用于动态选择重要的频率分量
-    而不是硬截断前n_modes个模式
+    自适应频率门控模块，基于论文的MoE模块实现
     """
     def __init__(self, 
                  n_modes: Tuple[int, ...],
@@ -32,85 +122,53 @@ class AdaptiveFrequencyGating(nn.Module):
         self.complex_data = complex_data
         self.n_dim = len(n_modes)
         
-        # 频率带边界参数（可学习）
-        self.band_boundaries = nn.Parameter(torch.rand(n_experts - 1))
+        # 计算频率长度 F
+        # 对于多维情况，我们处理最后一个维度作为主要频率维度
+        self.freq_length = n_modes[-1] if not complex_data else n_modes[-1]
         
-        # 门控网络：基于频率幅度决定权重
-        # 简化：使用固定大小的输入
-        self.gating_network = nn.Sequential(
-            nn.Linear(hidden_channels, hidden_channels),
-            nn.ReLU(),
-            nn.Linear(hidden_channels, n_experts)
+        # 使用论文中的MoE模块
+        self.moe_module = FrequencyMixtureOfExperts(
+            freq_length=self.freq_length,
+            channels=hidden_channels,
+            n_experts=n_experts,
+            temperature=temperature
         )
-        
-        # 每个专家的权重调制参数
-        self.expert_weights = nn.Parameter(torch.ones(n_experts))
         
     def forward(self, x_fft, x_spatial=None):
         """
         x_fft: 频域信号 [batch, channels, freq_dims...]
-        x_spatial: 空间域信号（用于门控）[batch, channels, spatial_dims...]
         返回: 加权后的频域信号和门控权重
         """
         batch_size, channels = x_fft.shape[:2]
         freq_shape = x_fft.shape[2:]
         
-        # 计算频率幅度谱
-        freq_magnitude = torch.abs(x_fft)
-        
-        # 获取排序后的频率带边界
-        boundaries = torch.sigmoid(self.band_boundaries)
-        boundaries, _ = torch.sort(boundaries)
-        
-        # 添加起始和结束边界
-        boundaries = torch.cat([
-            torch.zeros(1, device=boundaries.device),
-            boundaries,
-            torch.ones(1, device=boundaries.device)
-        ])
-        
-        # 创建频率掩码（简化版本）
-        freq_masks = []
-        total_freq_size = freq_shape[-1]
-        
-        for i in range(self.n_experts):
-            start_idx = int(boundaries[i] * total_freq_size)
-            end_idx = int(boundaries[i + 1] * total_freq_size)
-            
-            mask = torch.zeros_like(x_fft)
-            # 简化：只处理最后一个维度的频率
-            mask[..., start_idx:end_idx] = 1.0
-            freq_masks.append(mask)
-        
-        # 计算门控权重
-        # 使用空间域特征或频域特征的全局池化
-        if x_spatial is not None:
-            # 使用空间域的全局平均池化
-            gating_input = x_spatial.mean(dim=list(range(2, x_spatial.ndim)))  # [batch, channels]
+        # 对于多维频域数据，我们在最后一个维度应用MoE
+        if len(freq_shape) == 1:
+            # 1D情况：直接应用MoE
+            output, gating_scores, boundaries = self.moe_module(x_fft)
         else:
-            # 使用频域的全局平均池化
-            gating_input = freq_magnitude.mean(dim=list(range(2, freq_magnitude.ndim)))  # [batch, channels]
-        
-        # 通过门控网络
-        gating_scores = self.gating_network(gating_input)  # [batch, n_experts]
-        gating_scores = F.softmax(gating_scores / self.temperature, dim=-1)
-        
-        # 应用专家权重调制
-        gating_scores = gating_scores * self.expert_weights.unsqueeze(0)
-        gating_scores = gating_scores / (gating_scores.sum(dim=-1, keepdim=True) + 1e-8)
-        
-        # 组合不同频率带的贡献
-        weighted_fft = torch.zeros_like(x_fft)
-        for i, mask in enumerate(freq_masks):
-            # 扩展门控权重到正确的维度
-            expert_weight = gating_scores[:, i:i+1]  # [batch, 1]
-            for _ in range(len(freq_shape)):
-                expert_weight = expert_weight.unsqueeze(-1)
-            expert_weight = expert_weight.unsqueeze(1)  # 添加channel维度
+            # 多维情况：在最后一个维度应用MoE
+            # 重新整形为 [B, C, F]，其中F是最后一个频率维度
+            original_shape = x_fft.shape
+            flattened_freq_dims = freq_shape[:-1]
+            last_freq_dim = freq_shape[-1]
             
-            weighted_fft = weighted_fft + mask * x_fft * expert_weight
+            # 将前面的频率维度展平到batch维度
+            x_fft_reshaped = x_fft.view(batch_size * torch.prod(torch.tensor(flattened_freq_dims)), 
+                                       channels, last_freq_dim)
+            
+            # 应用MoE
+            output_reshaped, gating_scores, boundaries = self.moe_module(x_fft_reshaped)
+            
+            # 恢复原始形状
+            output = output_reshaped.view(original_shape)
+            
+            # 调整门控分数的形状
+            gating_scores = gating_scores.view(batch_size, 
+                                             torch.prod(torch.tensor(flattened_freq_dims)),
+                                             self.n_experts).mean(dim=1)
         
-        return weighted_fft, gating_scores, boundaries
+        return output, gating_scores, boundaries
 
 
 class AdaptiveSpectralConv(SpectralConv):
@@ -173,12 +231,11 @@ class AdaptiveSpectralConv(SpectralConv):
         if self.fno_block_precision == "mixed":
             x_fft = x_fft.chalf()
         
-        # 应用自适应频率门控
+        # 应用自适应频率门控（基于论文的MoE模块）
         x_fft_gated, gating_scores, boundaries = self.adaptive_gating(x_fft, x_spatial)
         
-        # 执行标准的频谱卷积（使用父类的方法）
-        # 这里我们简化处理，直接使用加权后的FFT进行后续处理
-        # 实际上应该调用父类的卷积操作
+        # 执行标准的频谱卷积（使用处理后的FFT）
+        # 这里简化处理，实际应该调用父类的卷积操作
         
         # 为了简化，我们直接返回到空间域
         if output_shape is not None:

@@ -20,9 +20,9 @@ class DarcyDatasetConfig(ConfigBase):
     folder: str = "~/data/darcy/"
     batch_size: int = 8
     n_train: int = 1000
-    train_resolution: int = 16
+    train_resolution: int = 64
     n_tests: List[int] = [100, 50]
-    test_resolutions: List[int] = [16, 32]
+    test_resolutions: List[int] = [64, 128]
     test_batch_sizes: List[int] = [16, 16]
     encode_input: bool = True
     encode_output: bool = True
