@@ -28,8 +28,6 @@ class FrequencyGatingModule(nn.Module):
         self.temperature = temperature
         self.n_dim = len(n_modes)
 
-        
-        
         # 频率带边界参数（可学习）
         self.band_boundaries = nn.Parameter(torch.rand(n_experts - 1) * 0.6 + 0.2)
         

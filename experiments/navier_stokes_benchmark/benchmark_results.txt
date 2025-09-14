@@ -1,0 +1,20 @@
+NAVIER-STOKES BENCHMARK RESULTS
+==================================================
+
+Configuration:
+  Viscosity: 0.0001
+  Final Time: 30
+  Samples: 1000
+  Resolution: 64×64
+  Epochs: 50
+  Batch Size: 16
+
+Benchmark Table:
+Config     Parameters   Time/Epoch   MSE         
+--------------------------------------------------
+FNO-2D     602,977      0.89         0.000011    
+FnoMoE     603,576      1.51         0.000016    
+
+Performance Summary:
+  MSE Improvement: -49.51%
+  Parameter Overhead: +0.1%

@@ -1,0 +1,19 @@
+Heat Equation Experiment Configuration (500 Epochs - Fixed)
+============================================================
+PDE Type: Heat Equation
+Mathematical Form: ∂u/∂t = α∇²u
+Diffusion Coefficient: 0.01
+Time Step: 0.1
+Number of Samples: 200
+Grid Size: 64x64
+Training Epochs: 500
+Learning Rate: 1e-3 (with ReduceLROnPlateau)
+Weight Decay: 0.0001
+Scheduler: ReduceLROnPlateau(patience=20, factor=0.5)
+Early Stopping: patience=100
+Gradient Clipping: max_norm=1.0
+FNO Modes: 16x16
+Hidden Channels: 32
+FNO Layers: 4
+Adaptive Experts: 4
+Batch Size: 16

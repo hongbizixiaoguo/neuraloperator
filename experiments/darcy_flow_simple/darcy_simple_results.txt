@@ -1,0 +1,12 @@
+DARCY FLOW SIMPLE COMPARISON RESULTS
+==================================================
+
+Benchmark Results:
+Config     Parameters   Best Loss   
+----------------------------------------
+FNO        357,217      3.061700    
+FnoMoE     357,816      3.201431    
+
+Performance Summary:
+  Improvement: -4.56%
+  Parameter Overhead: +0.2%

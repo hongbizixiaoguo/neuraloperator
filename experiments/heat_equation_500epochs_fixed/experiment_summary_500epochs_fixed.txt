@@ -1,0 +1,22 @@
+HEAT EQUATION 500 EPOCHS EXPERIMENT SUMMARY (FIXED)
+======================================================================
+
+Original FNO:
+  Total Epochs:      500
+  Final Train Loss:  1.144670545727422e-06
+  Final Test Loss:   5.441398987689657e-06
+  Best Test Loss:    5.436428409666405e-06
+  Training Time:     95.8s
+  Parameters:        602977
+
+Adaptive FNO:
+  Total Epochs:      500
+  Final Train Loss:  7.275589780419978e-07
+  Final Test Loss:   1.1970523322209676e-06
+  Best Test Loss:    1.1857135480871268e-06
+  Training Time:     157.9s
+  Parameters:        603576
+
+Performance Improvement:
+  Final Test Loss: +78.00%
+  Best Test Loss:  +78.19%
