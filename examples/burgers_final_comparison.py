@@ -20,23 +20,25 @@ sys.path.append('/root/autodl-tmp/neuraloperator')
 from neuralop.models.fno import FNO1d
 
 
-def load_burgers_data(data_path, batch_size=16):
+def load_burgers_data(data_path, resolution=16, batch_size=16):
     """加载Burgers数据"""
-    print(f"Loading Burgers data from {data_path}")
+    print(f"Loading Burgers data from {data_path} (resolution {resolution})")
     
     try:
-        train_data = torch.load(f"{data_path}/burgers_train_16.pt")
-        test_data = torch.load(f"{data_path}/burgers_test_16.pt")
+        train_data = torch.load(f"{data_path}/burgers_train_{resolution}.pt")
+        test_data = torch.load(f"{data_path}/burgers_test_{resolution}.pt")
         
         # 处理数据格式
-        x_train = train_data['x'].unsqueeze(1).float()  # [800, 1, 16]
-        y_train = train_data['y'][:, -1, :].unsqueeze(1).float()  # [800, 1, 16]
+        x_train = train_data['x'].unsqueeze(1).float()  # [N, 1, resolution]
+        y_train = train_data['y'][:, -1, :].unsqueeze(1).float()  # [N, 1, resolution]
         
-        x_test = test_data['x'].unsqueeze(1).float()  # [400, 1, 16]
-        y_test = test_data['y'][:, -1, :].unsqueeze(1).float()  # [400, 1, 16]
+        x_test = test_data['x'].unsqueeze(1).float()  # [N, 1, resolution]
+        y_test = test_data['y'][:, -1, :].unsqueeze(1).float()  # [N, 1, resolution]
         
         print(f"Train input shape: {x_train.shape}")
         print(f"Train output shape: {y_train.shape}")
+        print(f"Test input shape: {x_test.shape}")
+        print(f"Test output shape: {y_test.shape}")
         
         # 创建数据加载器
         train_dataset = TensorDataset(x_train, y_train)
@@ -48,17 +50,18 @@ def load_burgers_data(data_path, batch_size=16):
         return train_loader, test_loader
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error loading resolution {resolution}: {e}")
         return None, None
 
 
 class SimpleFNO1d(nn.Module):
-    """简化的1D FNO"""
-    def __init__(self, n_modes=16, hidden_channels=64, n_layers=4):
+    """简化的1D FNO - 支持不同分辨率"""
+    def __init__(self, n_modes=16, hidden_channels=64, n_layers=4, resolution=16):
         super().__init__()
-        self.n_modes = n_modes
+        self.n_modes = min(n_modes, resolution // 2)  # 确保模式数不超过分辨率的一半
         self.hidden_channels = hidden_channels
         self.n_layers = n_layers
+        self.resolution = resolution
         
         # 简单的lifting和projection
         self.lifting = nn.Conv1d(1, hidden_channels, 1)
@@ -89,13 +92,14 @@ class SimpleFNO1d(nn.Module):
 
 
 class AdaptiveSimpleFNO1d(nn.Module):
-    """带自适应频率选择的简化1D FNO"""
-    def __init__(self, n_modes=16, hidden_channels=64, n_layers=4, n_experts=4):
+    """带自适应频率选择的简化1D FNO - 支持不同分辨率"""
+    def __init__(self, n_modes=16, hidden_channels=64, n_layers=4, n_experts=4, resolution=16):
         super().__init__()
-        self.n_modes = n_modes
+        self.n_modes = min(n_modes, resolution // 2)  # 确保模式数不超过分辨率的一半
         self.hidden_channels = hidden_channels
         self.n_layers = n_layers
         self.n_experts = n_experts
+        self.resolution = resolution
         
         # 基础组件
         self.lifting = nn.Conv1d(1, hidden_channels, 1)
@@ -149,13 +153,17 @@ class AdaptiveSimpleFNO1d(nn.Module):
         return x
 
 
-def train_model(model, train_loader, test_loader, device, model_name, n_epochs=50):
+def train_model(model, train_loader, test_loader, device, model_name, n_epochs=50, lr=1e-4):
     """训练模型"""
     print(f"\nTraining {model_name}...")
     
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    # 使用更小的学习率和梯度裁剪
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
     criterion = nn.MSELoss()
+    
+    # 添加梯度裁剪
+    max_grad_norm = 1.0
     
     train_losses = []
     test_losses = []
@@ -171,7 +179,17 @@ def train_model(model, train_loader, test_loader, device, model_name, n_epochs=5
             optimizer.zero_grad()
             pred = model(x_batch)
             loss = criterion(pred, y_batch)
+            
+            # 检查损失是否为NaN
+            if torch.isnan(loss):
+                print(f"Warning: NaN loss detected in {model_name}")
+                continue
+            
             loss.backward()
+            
+            # 梯度裁剪
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+            
             optimizer.step()
             
             train_loss += loss.item()
@@ -194,7 +212,7 @@ def train_model(model, train_loader, test_loader, device, model_name, n_epochs=5
         
         scheduler.step(test_loss)
         
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 50 == 0:
             print(f"Epoch {epoch+1}/{n_epochs} - Train: {train_loss:.6f}, Test: {test_loss:.6f}")
     
     return {
@@ -380,39 +398,68 @@ def print_summary(results_dict, eval_results):
     print("="*60)
 
 
-def main():
-    """主函数"""
-    print("🚀 Burgers Equation: Simple vs Adaptive FNO Comparison")
-    print("="*55)
+def run_resolution_experiment(resolution, n_epochs=300):
+    """运行单个分辨率的实验"""
+    print(f"\n{'='*70}")
+    print(f"🧪 EXPERIMENT: Resolution {resolution}")
+    print(f"{'='*70}")
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
+    # 根据分辨率调整参数
+    if resolution <= 256:
+        batch_size = 16
+        n_modes = 16
+        hidden_channels = 64
+        n_layers = 4
+        learning_rate = 1e-3
+    elif resolution <= 512:
+        batch_size = 12
+        n_modes = 32
+        hidden_channels = 64
+        n_layers = 4
+        learning_rate = 8e-4
+    elif resolution <= 1024:
+        batch_size = 8
+        n_modes = 64
+        hidden_channels = 64
+        n_layers = 4
+        learning_rate = 5e-4
+    else:  # 2048+
+        batch_size = 4
+        n_modes = 128
+        hidden_channels = 96
+        n_layers = 6
+        learning_rate = 1e-4
+    
+    print(f"Parameters: batch_size={batch_size}, n_modes={n_modes}, channels={hidden_channels}, layers={n_layers}, lr={learning_rate}")
+    
     # 加载数据
     data_path = "/root/autodl-tmp/neuraloperator/neuralop/data/datasets/data"
-    train_loader, test_loader = load_burgers_data(data_path, batch_size=16)
+    train_loader, test_loader = load_burgers_data(data_path, resolution=resolution, batch_size=batch_size)
     
     if train_loader is None:
-        print("❌ Failed to load data")
-        return
+        print(f"❌ Failed to load data for resolution {resolution}")
+        return None
     
     # 创建模型
     print("\n🏗️  Creating models...")
-    simple_fno = SimpleFNO1d(n_modes=16, hidden_channels=64, n_layers=4).to(device)
-    adaptive_fno = AdaptiveSimpleFNO1d(n_modes=16, hidden_channels=64, 
-                                      n_layers=4, n_experts=4).to(device)
+    simple_fno = SimpleFNO1d(n_modes=n_modes, hidden_channels=hidden_channels, 
+                            n_layers=n_layers, resolution=resolution).to(device)
+    adaptive_fno = AdaptiveSimpleFNO1d(n_modes=n_modes, hidden_channels=hidden_channels, 
+                                      n_layers=n_layers, n_experts=4, resolution=resolution).to(device)
     
     print(f"Simple FNO parameters: {sum(p.numel() for p in simple_fno.parameters()):,}")
     print(f"Adaptive FNO parameters: {sum(p.numel() for p in adaptive_fno.parameters()):,}")
     
     # 训练模型
-    n_epochs = 50
     print(f"\n🎯 Training for {n_epochs} epochs...")
     
     simple_results = train_model(simple_fno, train_loader, test_loader, 
-                                device, "Simple FNO", n_epochs)
+                                device, "Simple FNO", n_epochs, learning_rate)
     adaptive_results = train_model(adaptive_fno, train_loader, test_loader, 
-                                  device, "Adaptive FNO", n_epochs)
+                                  device, "Adaptive FNO", n_epochs, learning_rate)
     
     results_dict = {
         'Simple FNO': simple_results,
@@ -423,21 +470,66 @@ def main():
     models = [(simple_fno, 'Simple FNO'), (adaptive_fno, 'Adaptive FNO')]
     eval_results = evaluate_models(models, test_loader, device)
     
-    # 可视化
-    visualize_results(models, test_loader, device)
-    plot_training_curves(results_dict)
+    return {
+        'resolution': resolution,
+        'training_results': results_dict,
+        'eval_results': eval_results,
+        'models': models,
+        'test_loader': test_loader,
+        'device': device
+    }
+
+
+def main():
+    """主函数 - 多分辨率对比实验"""
+    print("🚀 Burgers Equation: Multi-Resolution FNO Comparison")
+    print("="*60)
     
-    # 打印总结
-    print_summary(results_dict, eval_results)
+    # 要测试的分辨率
+    resolutions = [256, 512, 1024]
+    n_epochs = 300  # 增加训练轮数以获得更好的收敛
     
-    # 保存模型
-    torch.save(simple_fno.state_dict(), 
-               '/root/autodl-tmp/neuraloperator/burgers_simple_fno.pth')
-    torch.save(adaptive_fno.state_dict(), 
-               '/root/autodl-tmp/neuraloperator/burgers_adaptive_simple_fno.pth')
+    all_results = {}
     
-    print("\n💾 Models saved!")
-    print("🎉 Comparison completed!")
+    for resolution in resolutions:
+        result = run_resolution_experiment(resolution, n_epochs)
+        if result is not None:
+            all_results[resolution] = result
+    
+    # 打印所有结果的总结
+    print("\n" + "="*80)
+    print("📊 MULTI-RESOLUTION COMPARISON SUMMARY")
+    print("="*80)
+    
+    print(f"\n{'Resolution':<12} {'Model':<15} {'Train Loss':<12} {'Test Loss':<12} {'MSE':<12} {'Time(ms)':<10}")
+    print("-" * 75)
+    
+    for resolution, result in all_results.items():
+        for model_name, train_result in result['training_results'].items():
+            eval_result = result['eval_results'][model_name]
+            print(f"{resolution:<12} {model_name:<15} {train_result['final_train_loss']:<12.6f} "
+                  f"{train_result['final_test_loss']:<12.6f} {eval_result['mse']:<12.6f} "
+                  f"{eval_result['avg_inference_time']:<10.2f}")
+    
+    # 可视化第一个分辨率的结果
+    if all_results:
+        first_resolution = list(all_results.keys())[0]
+        first_result = all_results[first_resolution]
+        print(f"\n📈 Generating visualization for resolution {first_resolution}...")
+        
+        visualize_results(first_result['models'], first_result['test_loader'], first_result['device'])
+        plot_training_curves(first_result['training_results'])
+        
+        # 保存模型
+        simple_fno, adaptive_fno = first_result['models'][0][0], first_result['models'][1][0]
+        torch.save(simple_fno.state_dict(), 
+                   f'/root/autodl-tmp/neuraloperator/burgers_simple_fno_{first_resolution}.pth')
+        torch.save(adaptive_fno.state_dict(), 
+                   f'/root/autodl-tmp/neuraloperator/burgers_adaptive_fno_{first_resolution}.pth')
+        
+        print(f"\n💾 Models saved for resolution {first_resolution}!")
+    
+    print("\n🎉 Multi-resolution comparison completed!")
 
 
 if __name__ == "__main__":

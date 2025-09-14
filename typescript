@@ -1,0 +1,147 @@
+Script started on 2025-09-14 21:38:03+08:00 [TERM="xterm-256color" TTY="/dev/pts/1" COLUMNS="111" LINES="17"]
+[1m[7m#[27m[1m[0m                                                                                                               ]2;root@autodl-container-242a4285b3-f27aadc6:~/autodl-tmp/neuraloperator]1;..euraloperator[0m[27m[24m[J[01;32m➜  [36mneuraloperator[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mneuraloperator[00m [01;34mgit:([31mFnoMoE[34m) [33m✗[00m [K[4mc[24m[4mc[24m[90md neuraloperator[39m[16D[24m[32mc[32md[39m[39m [39m[4ms[24m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [13D[90mcripts[39m[4ms[39m[4mc[24m[4mc[39m[4mr[39m[4mi[39m[4mp[39m[4mt[39m[4ms[1m[4m/[0m[24m[4ms[24m[0m[24m [?1l>[?2004l
+]2;cd scripts]1;cd[1m[7m#[27m[1m[0m                                                                                                               ]2;root@autodl-container-242a4285b3-f27aadc6:~/autodl-tmp/neuraloperator/scripts]1;..rator/scripts[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mFnoMoE[34m) [33m✗[00m [K[?1h=[?2004h[32ml[39m[32ml[39m[90ms[39m[32ml[32ms[39m[?1l>[?2004l
+]2;ls --color=tty]1;lslogin_wandb.py       train_burgers_pino.py   train_gino_carcfd.py    train_navier_stokes_comparison.py
+test_from_config.py  train_darcy.py          train_mhd64.py          train_poisson.py
+train_burgers.py     train_fnogno_carcfd.py  train_navier_stokes.py  train_uqno_darcy.py
+[1m[7m#[27m[1m[0m                                                                                                               ]2;root@autodl-container-242a4285b3-f27aadc6:~/autodl-tmp/neuraloperator/scripts]1;..rator/scripts[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mFnoMoE[34m) [33m✗[00m [K[?1h=[?2004h[1m[31mp[0m[39m[1m[31mp[0m[39m[90mython burgers_simple_comparison.py[39m[34D[1m[31mp[1m[31my[0m[39m[1m[31mp[1m[31my[1m[31mt[0m[39m[1m[31mt[1m[31mh[0m[39m[1m[31mh[1m[31mo[0m[39m[0m[32mp[0m[32my[0m[32mt[0m[32mh[0m[32mo[32mn[39m[39m [39mb[39mu[4mt[4mr[39m[4ma[39m[4mi[39m[4mn[39m[4m_[39m[4mb[39m[4mu[39m[4mr[39m[4mg[39m[4me[39m[4mr[39m[4ms[24m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [15D[90m.py[39m[4ms[39m[4m.[24m[4m.[39m[4mp[39m[4my[24m[1m [0m[90m--opt.n_epochs=5 --wandb.log=False[39m[34D[0m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [35D[?1l>[?2004l
+]2;python train_burgers.py]1;python##### CONFIG ######
+{'_config_name': 'default', 'n_params_baseline': None, 'verbose': True, 'arch': 'fno', 'distributed': {'use_distributed': False, 'model_parallel_size': 1, 'seed': None}, 'model': {'model_arch': 'fno', 'lifting_channel_ratio': 2, 'projection_channel_ratio': 2, 'n_layers': 4, 'domain_padding': 0.0, 'fft_norm': 'forward', 'norm': None, 'skip': 'linear', 'implementation': 'reconstructed', 'use_channel_mlp': True, 'channel_mlp_expansion': 0.5, 'channel_mlp_dropout': 0, 'separable': False, 'factorization': None, 'rank': 1.0, 'fixed_rank_modes': None, 'dropout': 0.0, 'joint_factorization': False, 'stabilizer': None, 'data_channels': 1, 'out_channels': 1, 'n_modes': [16, 16], 'hidden_channels': 24}, 'opt': {'n_epochs': 1000, 'training_loss': 'l2', 'testing_loss': 'l2', 'learning_rate': 0.0001, 'weight_decay': 0.0001, 'eval_interval': 1, 'mixed_precision': False, 'scheduler': 'ReduceLROnPlateau', 'scheduler_patience': 100, 'step_size': 60, 'gamma': 0.5}, 'data': {'folder': 'neuralop/data/datasets/data/', 'batch_size': 16, 'n_train': 800, 'test_batch_sizes': [16], 'n_tests': [400], 'spatial_length': 16, 'temporal_length': 17, 'temporal_subsample': None, 'encode_input': False, 'encode_output': False, 'include_endpoint': [True, False]}, 'patching': {'levels': 0, 'padding': 0, 'stitching': False}, 'wandb': {'log': False, 'entity': None, 'project': None, 'name': None, 'group': None, 'sweep': False, 'log_output': True}}
+/root/autodl-tmp/neuraloperator/neuralop/data/datasets/pt_dataset.py:125: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  x_train = x_train[train_input_indices]
+/root/autodl-tmp/neuraloperator/neuralop/data/datasets/pt_dataset.py:148: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  y_train = y_train[train_output_indices]
+Loading test db for resolution 16 with 400 samples 
+/root/autodl-tmp/neuraloperator/neuralop/data/datasets/pt_dataset.py:204: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  x_test = x_test[test_input_indices]
+/root/autodl-tmp/neuraloperator/neuralop/data/datasets/pt_dataset.py:211: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  y_test = y_test[test_output_indices]
+
+### MODEL ###
+ FNO(
+  (positional_embedding): GridEmbeddingND()
+  (fno_blocks): FNOBlocks(
+    (convs): ModuleList(
+      (0-3): 4 x SpectralConv(
+        (weight): DenseTensor(shape=torch.Size([24, 24, 16, 9]), rank=None)
+      )
+    )
+    (fno_skips): ModuleList(
+      (0-3): 4 x Flattened1dConv(
+        (conv): Conv1d(24, 24, kernel_size=(1,), stride=(1,), bias=False)
+      )
+    )
+    (channel_mlp): ModuleList(
+      (0-3): 4 x ChannelMLP(
+        (fcs): ModuleList(
+          (0): Conv1d(24, 12, kernel_size=(1,), stride=(1,))
+          (1): Conv1d(12, 24, kernel_size=(1,), stride=(1,))
+        )
+      )
+    )
+    (channel_mlp_skips): ModuleList(
+      (0-3): 4 x SoftGating()
+    )
+  )
+  (lifting): ChannelMLP(
+    (fcs): ModuleList(
+      (0): Conv1d(3, 48, kernel_size=(1,), stride=(1,))
+      (1): Conv1d(48, 24, kernel_size=(1,), stride=(1,))
+    )
+  )
+  (projection): ChannelMLP(
+    (fcs): ModuleList(
+      (0): Conv1d(24, 48, kernel_size=(1,), stride=(1,))
+      (1): Conv1d(48, 1, kernel_size=(1,), stride=(1,))
+    )
+  )
+)
+
+### OPTIMIZER ###
+ AdamW (
+Parameter Group 0
+    betas: (0.9, 0.999)
+    correct_bias: True
+    eps: 1e-06
+    lr: 0.0001
+    weight_decay: 0.0001
+)
+
+### SCHEDULER ###
+ <torch.optim.lr_scheduler.ReduceLROnPlateau object at 0x7feaa87df6a0>
+
+### LOSSES ###
+
+ * Train: Combined loss: <neuralop.losses.data_losses.LpLoss object at 0x7feaa87dc280> (weight: 1.0) 
+
+ * Test: {'h1': <neuralop.losses.data_losses.H1Loss object at 0x7feaa87cd4b0>, 'l2': <neuralop.losses.data_losses.LpLoss object at 0x7feaa87dc280>}
+
+### Beginning Training...
+
+
+n_params: 671113
+Training on 800 samples
+Testing on [400] samples         on resolutions [16].
+/root/miniconda3/lib/python3.10/site-packages/tltorch/factorized_tensors/factorized_tensors.py:66: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  return self.__class__(self.tensor[indices])
+/root/autodl-tmp/neuraloperator/neuralop/layers/spectral_convolution.py:486: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:306.)
+  out_fft[slices_x] = self._contract(x[slices_x], weight, separable=self.separable)
+Raw outputs of shape torch.Size([16, 1, 17, 16])
+[0] time=2.05, avg_loss=1.0404, train_err=16.6462
+Eval: 16_h1=1.0009, 16_l2=1.0250
+[1] time=1.55, avg_loss=1.0115, train_err=16.1833
+Eval: 16_h1=0.9957, 16_l2=1.0006
+[2] time=1.55, avg_loss=0.9910, train_err=15.8557
+Eval: 16_h1=0.9834, 16_l2=0.9804
+[3] time=1.54, avg_loss=0.9642, train_err=15.4274
+Eval: 16_h1=0.9483, 16_l2=0.9390
+[4] time=1.58, avg_loss=0.8732, train_err=13.9705
+Eval: 16_h1=0.7949, 16_l2=0.7468
+[5] time=1.55, avg_loss=0.4995, train_err=7.9913
+Eval: 16_h1=0.5094, 16_l2=0.3118
+[6] time=1.54, avg_loss=0.2648, train_err=4.2371
+Eval: 16_h1=0.4062, 16_l2=0.2297
+[7] time=1.56, avg_loss=0.2114, train_err=3.3827
+Eval: 16_h1=0.3508, 16_l2=0.1921
+[8] time=1.54, avg_loss=0.1754, train_err=2.8065
+Eval: 16_h1=0.2920, 16_l2=0.1555
+[9] time=1.52, avg_loss=0.1368, train_err=2.1891
+Eval: 16_h1=0.2316, 16_l2=0.1183
+[10] time=1.52, avg_loss=0.1067, train_err=1.7078
+Eval: 16_h1=0.1918, 16_l2=0.0968
+[11] time=1.52, avg_loss=0.0892, train_err=1.4275
+Eval: 16_h1=0.1632, 16_l2=0.0825
+[12] time=1.59, avg_loss=0.0761, train_err=1.2181
+Eval: 16_h1=0.1402, 16_l2=0.0709
+[13] time=1.56, avg_loss=0.0661, train_err=1.0584
+Eval: 16_h1=0.1230, 16_l2=0.0626
+[14] time=1.56, avg_loss=0.0583, train_err=0.9335
+Eval: 16_h1=0.1091, 16_l2=0.0554
+[15] time=1.59, avg_loss=0.0519, train_err=0.8312
+Eval: 16_h1=0.0976, 16_l2=0.0492
+[16] time=1.52, avg_loss=0.0464, train_err=0.7422
+Eval: 16_h1=0.0879, 16_l2=0.0444
+[17] time=1.54, avg_loss=0.0414, train_err=0.6620
+Eval: 16_h1=0.0790, 16_l2=0.0396
+[18] time=1.55, avg_loss=0.0371, train_err=0.5932
+Eval: 16_h1=0.0710, 16_l2=0.0353
+[19] time=1.54, avg_loss=0.0333, train_err=0.5326
+Eval: 16_h1=0.0641, 16_l2=0.0315
+[20] time=1.57, avg_loss=0.0299, train_err=0.4791
+Eval: 16_h1=0.0582, 16_l2=0.0288
+^CTraceback (most recent call last):
+  File "/root/autodl-tmp/neuraloperator/scripts/train_burgers.py", line 196, in <module>
+    trainer.train(
+  File "/root/autodl-tmp/neuraloperator/neuralop/training/trainer.py", line 227, in train
+    self.train_one_epoch(epoch, train_loader, training_loss)
+  File "/root/autodl-tmp/neuraloperator/neuralop/training/trainer.py", line 290, in train_one_epoch
+    self.optimizer.step()
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/optim/optimizer.py", line 516, in wrapper
+    out = func(*args, **kwargs)
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/root/autodl-tmp/neuraloperator/neuralop/training/adamw.py", line 164, in step
+    denom = exp_avg_sq.sqrt().add_(group["eps"])
+KeyboardInterrupt
+
+[1m[7m#[27m[1m[0m                                                                                                               ]2;root@autodl-container-242a4285b3-f27aadc6:~/autodl-tmp/neuraloperator/scripts]1;..rator/scripts[0m[27m[24m[J[01;31m➜  [36mscripts[00m [01;34mgit:([31mFnoMoE[34m) [33m✗[00m [K[?1h=[?2004h[32ml[39m[32ml[39m[90ms[39m
