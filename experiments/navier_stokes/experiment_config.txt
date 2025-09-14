@@ -1,0 +1,13 @@
+Navier-Stokes Equation Experiment Configuration
+==================================================
+Equation: 2D Navier-Stokes (Vorticity Form)
+Mathematical Form: ∂w/∂t + u·∇w = ν∆w + f(x)
+Viscosity: 0.0001
+Final Time: 30
+Number of Samples: 1000
+Grid Size: 64×64
+Training Epochs: 100
+Learning Rate: 1e-3 (AdamW)
+Weight Decay: 0.0001
+Scheduler: ReduceLROnPlateau
+Batch Size: 16

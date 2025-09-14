@@ -131,6 +131,7 @@ def create_models(device, grid_size=64):
     # 根据论文中的配置
     n_modes = 16  # 对应64x64分辨率
     
+    
     # 原始FNO (FNO-2D)
     original_fno = FNO2d(
         n_modes_height=n_modes,
